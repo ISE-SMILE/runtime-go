@@ -16,33 +16,9 @@
 # limitations under the License.
 #
 -->
-# Apache OpenWhisk Runtimes for Go
+# Smile OpenWhiks Runtimes for Go
+This project is based on the [Apache OpenWhisk Runtimes](https://github.com/apache/openwhisk-runtime-go/) but implementes support for changes in the SMILE-OpenWhisk Platfrom.
 
-[![Build Status](https://travis-ci.com/apache/openwhisk-runtime-go.svg?branch=master)](https://travis-ci.com/apache/openwhisk-runtime-go)
-[![License](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](http://www.apache.org/licenses/LICENSE-2.0)
-[![Join Slack](https://img.shields.io/badge/join-slack-9B69A0.svg)](http://slack.openwhisk.org/)
+This runtime supports **go1.15+** only. Have a look at the [docs](./docs) to see how to use this runtime.
 
-This repository contains both the OpenWhisk runtime for Golang Actions, as well as a runtime for Generic executables.
 
-- If you are in a hurry, check the [examples](examples/EXAMPLES.md)
-- Writing Actions for the runtime in [Golang](docs/ACTION.md#golang)
-- How to deploy your [Golang](docs/DEPLOY.md#golang) sources
-- Precompiling [Golang](docs/DEPLOY.md#precompile) actions
-- How to use VSCode to write [Golang](docs/DEPLOY.md#vscode) actions
-- How to [Build](docs/BUILD.md#building) the runtime, with development notes
-
-## Actionloop runtime
-
-### Using the Go runtime for Generic executables
-
-- Writing [Generic](docs/ACTION.md#generic) actions, in bash or as a generic linux binary
-- Deployment for [Generic](docs/DEPLOY.md#generic) actions
-- The [ActionLoop](docs/ACTION.md#actionloop) protocol for generic actions
-- Environment [Variables](docs/ENVVARS.md) to configure the proxy
-
-# Change Log
-
-[CHANGES.md](CHANGES.md)
-
-# License
-[Apache 2.0](LICENSE.txt)
