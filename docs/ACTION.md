@@ -63,6 +63,45 @@ func Main(obj map[string]interface{}) map[string]interface{} {
 }
 ```
 
+#### Life-Cycle Hooks
+As an optinal feature a runtime may register multiple life-cycle hooks to handle runtime pausing, stoping and other life-cycle events.
+```go
+
+type HookHandler struct {
+    BaseSignals
+}
+
+func (h HookHandler)  Pause(out *os.File) {
+	//FLush open connections, close database connections...
+}
+
+func func init() {
+	//registers that we want to handle pause hooks
+    ackMsg.PauseOk = true;
+    //registers the custom handler
+	Interruppts = &HookHandler{}
+}
+
+
+
+// Main is the function implementing the action
+func Main(obj map[string]interface{}) map[string]interface{} {
+  // do your work
+  name, ok := obj["name"].(string)
+  if !ok {
+    name = "world"
+  }
+  msg := make(map[string]interface{})
+  msg["message"] = "Hello, " + name + "!"
+  // log in stdout or in stderr
+  log.Printf("name=%s\n", name)
+  // encode the result back in json
+  return msg
+}
+```
+
+For more details have a look at the `signals` interface as well as the in the `Life-Cycle Protocol` section.
+
 You can also have multiple source files in an action, packages and vendor folders.  Check the [deployment](DEPLOY.md) document for more details how to package and deploy actions.
 
 <a name="generic"/>
@@ -77,7 +116,7 @@ The `actionloop` runtime can execute  generic Linux executable in an efficient w
 
 The protocol can be specified informally as follows.
 
-- Send an acknowledgement after initialization when required. If the environment variable `__OW_WAIT_FOR_ACK` is not empty, write on file descriptor 3 the string `{ "ok": true }`.
+- Send an acknowledgement after initialization when required. If the environment variable `__OW_WAIT_FOR_ACK` is not empty, write on file descriptor 3 the string `{ "ok": true }`. Write an `{"ok":true,("pause"|"finish"|"hint"|"freshen"):true}` if the runtime supports any addintional life-cycle features.
 - Read one line from standard input (file descriptor 0).
 - Parse the line as a JSON object. Currently the object will be in currently in the format:
 
@@ -99,7 +138,16 @@ Usually this JSON is read and the values are stored in environment variables, co
 - The payload of the request is stored in the key `value`. The action should read the field `value` assuming it is a JSON object (note, not an array, nor a string or number) and parse it.
 - The action can now perform its tasks as appropriate. The action can produce log writing  in standard output (file descriptor 1) and standard error (file descriptor 3) . Note that those corresponds to file descriptors 1 and 2.
 - The action will receive also file descriptor 3 for returning results. The result of the action must be a single line (without embedding newlines - newlines in strings must be quoted) written in file descriptor 3.
-- The action should not exit now, but continue the loop, reading the next line and processing as described before, continuing forever.
+- The action should not exit now, but continue the loop, reading the next line and processing as described before, continuing forever. See Life-Cycle Protocol for interactions outside the line reading.
+
+
+#### Life-Cycle Protocol
+An action may register with the runtime to recieve runtime-life-cylce hints. For example, a action may wan't to be notified before a runtime is paused to flush pending connections.
+
+- Pause: set `"pause":true` in the start acknolagement. If enabled the runtime will use SIGINT to hint that an action is about to be paused.
+- Finish: set `"finish":true` in the start acknolagement. If enabled the runtime will use SIGABRT to hint that an action is about to be stoped (removed).
+- Hint: set `"hint":true` in the start acknolagement. If enabled the runtime will use SIGUSR1 to recieve hints through user actions, can be used for warming or lightwight reconfiguration.
+- Freshen set `"freshen":true` in the start acknolagement. If enabled the runtime will use SIGUSR2 to recieve the freshen mechanism.
 
 ### Using shell scripts
 

@@ -56,3 +56,4 @@ exec
 *_launcher_.go
 test.json
 pkg/
+__debug_bin

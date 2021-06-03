@@ -25,6 +25,7 @@ import (
 	"io"
 	"os"
 	"os/exec"
+	"syscall"
 	"time"
 )
 
@@ -41,6 +42,11 @@ type Executor struct {
 	input  io.WriteCloser
 	output *bufio.Reader
 	exited chan bool
+
+	supportsOnPause  bool
+	supportsOnFinish bool
+	supportsHint     bool
+	supportsFreshen  bool
 }
 
 // NewExecutor creates a child subprocess using the provided command line,
@@ -73,6 +79,10 @@ func NewExecutor(logout *os.File, logerr *os.File, command string, env map[strin
 		input,
 		output,
 		make(chan bool),
+		false,
+		false,
+		false,
+		false,
 	}
 }
 
@@ -118,7 +128,11 @@ func (proc *Executor) Exited() bool {
 
 // ActionAck is the expected data structure for the action acknowledgement
 type ActionAck struct {
-	Ok bool `json:"ok"`
+	Ok        bool  `json:"ok"`
+	PauseOk   *bool `json:"pause,omitempty"`
+	FinishOk  *bool `json:"finish,omitempty"`
+	HintOk    *bool `json:"hint,omitempty"`
+	FreshenOk *bool `json:"freshen,omitempty"`
 }
 
 // Start execution of the command
@@ -173,6 +187,23 @@ func (proc *Executor) Start(waitForAck bool) error {
 			ack <- fmt.Errorf("The action did not initialize properly.")
 			return
 		}
+
+		if ackData.PauseOk != nil && *ackData.PauseOk {
+			proc.supportsOnPause = true
+		}
+
+		if ackData.FinishOk != nil && *ackData.FinishOk {
+			proc.supportsOnFinish = true
+		}
+
+		if ackData.FreshenOk != nil && *ackData.FreshenOk {
+			proc.supportsFreshen = true
+		}
+
+		if ackData.HintOk != nil && *ackData.HintOk {
+			proc.supportsHint = true
+		}
+
 		ack <- nil
 	}()
 	// wait for ack or unexpected termination
@@ -194,4 +225,46 @@ func (proc *Executor) Stop() {
 		proc.cmd.Process.Kill()
 		proc.cmd = nil
 	}
+}
+
+func (proc *Executor) Singal(signal syscall.Signal) ([]byte, error) {
+
+	chout := make(chan []byte)
+	go func() {
+		out, err := proc.output.ReadBytes('\n')
+		if err == nil {
+			chout <- out
+		} else {
+			chout <- []byte{}
+		}
+	}()
+
+	var err error
+	err = proc.cmd.Process.Signal(signal)
+	if err != nil {
+		return nil, err
+	}
+
+	var out []byte
+	select {
+	case out = <-chout:
+		if len(out) == 0 {
+			//send if prog did not return anything
+			out = []byte("{}")
+		}
+	case <-proc.exited:
+		err = errors.New("command exited")
+	//per defintion we only wait 5 seconds for a signal response
+	case <-time.After(time.Second * 5):
+		Debug("signal was not acknowledged")
+		out = []byte("{}")
+	}
+	proc.cmd.Stdout.Write([]byte(OutputGuard))
+	proc.cmd.Stderr.Write([]byte(OutputGuard))
+
+	if err != nil {
+		return nil, err
+	}
+
+	return out, err
 }

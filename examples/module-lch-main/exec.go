@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package main
 
 import (
@@ -22,33 +21,28 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
-// OwExecutionEnv is the execution environment set at compile time
-var OwExecutionEnv = ""
+type ackMsg struct {
+	Ok        bool `json:"ok"`
+	PauseOk   bool `json:"pause,omitempty"`
+	FinishOk  bool `json:"finish,omitempty"`
+	HintOk    bool `json:"hint,omitempty"`
+	FreshenOk bool `json:"freshen,omitempty"`
+}
+
+func init() {
+	zerolog.TimeFieldFormat = ""
+}
 
 func main() {
-	// check if the execution environment is correct
-	if OwExecutionEnv != "" && OwExecutionEnv != os.Getenv("__OW_EXECUTION_ENV") {
-		fmt.Println("Execution Environment Mismatch")
-		fmt.Println("Expected: ", OwExecutionEnv)
-		fmt.Println("Actual: ", os.Getenv("__OW_EXECUTION_ENV"))
-		os.Exit(1)
-	}
-
-	// debugging
-	var debug = os.Getenv("OW_DEBUG") != ""
-	if debug {
-		f, err := os.OpenFile("/tmp/action.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-		if err == nil {
-			log.SetOutput(f)
-		}
-		log.Printf("Environment: %v", os.Environ())
-	}
 
 	// assign the main function
 	type Action func(event map[string]interface{}) map[string]interface{}
@@ -60,37 +54,53 @@ func main() {
 	defer out.Close()
 	reader := bufio.NewReader(os.Stdin)
 
-	// acknowledgement of started action
-	fmt.Fprintf(out, `{ "ok": true}%s`, "\n")
-	if debug {
-		log.Println("action started")
+	capture := make(chan os.Signal, 2)
+	signal.Notify(capture, syscall.SIGINT, syscall.SIGABRT, syscall.SIGUSR1, syscall.SIGUSR2)
+
+	go func() {
+		for {
+			sig := <-capture
+			fmt.Printf("{\"signal\":\"%+v\"}%s", sig, '\n')
+			fmt.Fprintf(out, "{\"signal\":\"%+v\"}\n", sig)
+
+			if sig == syscall.SIGTRAP {
+
+				return
+			}
+		}
+	}()
+
+	msg := ackMsg{
+		Ok:        true,
+		PauseOk:   true,
+		FinishOk:  true,
+		HintOk:    true,
+		FreshenOk: true,
+	}
+	buf, err := json.Marshal(msg)
+	if err != nil {
+		fmt.Fprintf(out, `{ \"ok\": false , }%s`, "\n")
+	} else {
+		fmt.Fprintln(out, string(buf))
 	}
 
-	// read-eval-print loop
 	for {
 		// read one line
 		inbuf, err := reader.ReadBytes('\n')
 		if err != nil {
-			if err != io.EOF {
-				log.Println(err)
-			}
 			break
 		}
-		if debug {
-			log.Printf(">>>'%s'>>>", inbuf)
-		}
+
 		// parse one line
 		var input map[string]interface{}
 		err = json.Unmarshal(inbuf, &input)
 		if err != nil {
-			log.Println(err.Error())
 			fmt.Fprintf(out, "{ error: %q}\n", err.Error())
 			continue
 		}
-		if debug {
-			log.Printf("%v\n", input)
-		}
+
 		// set environment variables
+		err = json.Unmarshal(inbuf, &input)
 		for k, v := range input {
 			if k == "value" {
 				continue
@@ -109,14 +119,21 @@ func main() {
 		// encode the answer
 		output, err := json.Marshal(&result)
 		if err != nil {
-			log.Println(err.Error())
 			fmt.Fprintf(out, "{ error: %q}\n", err.Error())
 			continue
 		}
 		output = bytes.Replace(output, []byte("\n"), []byte(""), -1)
-		if debug {
-			log.Printf("<<<'%s'<<<", output)
-		}
 		fmt.Fprintf(out, "%s\n", output)
 	}
+}
+
+func Main(obj map[string]interface{}) map[string]interface{} {
+	name, ok := obj["name"].(string)
+	if !ok {
+		name = "world"
+	}
+	log.Debug().Str("name", name).Msg("Hello")
+	msg := make(map[string]interface{})
+	msg["module-main"] = "Hello, " + name + "!"
+	return msg
 }

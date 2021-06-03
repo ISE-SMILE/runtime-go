@@ -37,6 +37,8 @@ var compile = flag.String("compile", "", "compile, reading in standard input the
 // flag to pass an environment as a json string
 var env = flag.String("env", "", "pass an environment as a json string")
 
+var port = flag.Int("port", 8080, "port to use for the proxy")
+
 // fatal if error
 func fatalIf(err error) {
 	if err != nil {
@@ -71,6 +73,6 @@ func main() {
 
 	// start the balls rolling
 	openwhisk.Debug("OpenWhisk ActionLoop Proxy %s: starting", openwhisk.Version)
-	ap.Start(8080)
+	ap.Start(*port)
 
 }

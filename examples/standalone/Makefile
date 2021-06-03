@@ -32,7 +32,7 @@ devel: package.done $(SRC)
 	$(WSK) action update $(PACKAGE)/$(NAME) $(SRC) --main $(MAIN) --docker $(OW_COMPILER)
 
 $(ZIP): $(SRC)
-	docker run -i $(OW_COMPILER) -compile $(MAIN) <$(SRC) >$(ZIP)
+	zip - -qr $(SRCS) | docker run -i $(OW_COMPILER) -compile $(MAIN) >$(ZIP)
 
 clean:
 	-$(WSK) action delete $(PACKAGE)/$(NAME)

@@ -39,10 +39,31 @@ type initRequest struct {
 	Value initBodyRequest `json:"value,omitempty"`
 }
 
-func sendOK(w http.ResponseWriter) {
+type ActionAckResponse struct {
+	Ok        bool `json:"ok"`
+	PauseOk   bool `json:"onPauseHandlerOK,omitempty"`
+	FinishOk  bool `json:"onFinishHandlerOK,omitempty"`
+	HintOk    bool `json:"hintHandlerOk,omitempty"`
+	FreshenOk bool `json:"freshenHandlerOk,omitempty"`
+}
+
+func sendOK(executor *Executor, w http.ResponseWriter) {
+
+	resp := ActionAckResponse{Ok: true}
+	if executor != nil {
+		resp.PauseOk = executor.supportsOnPause
+		resp.FinishOk = executor.supportsOnFinish
+		resp.HintOk = executor.supportsHint
+		resp.FreshenOk = executor.supportsFreshen
+	}
+
 	// answer OK
 	w.Header().Set("Content-Type", "application/json")
-	buf := []byte("{\"ok\":true}\n")
+	buf, err := json.Marshal(resp)
+	if err != nil {
+		Debug("failed to marshal ack %+v", err)
+		buf = []byte("{\"ok\":true}\n")
+	}
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(buf)))
 	w.Write(buf)
 	if f, ok := w.(http.Flusher); ok {
@@ -142,7 +163,7 @@ func (ap *ActionProxy) initHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ap.initialized = true
-	sendOK(w)
+	sendOK(ap.theExecutor, w)
 }
 
 // ExtractAndCompile decode the buffer and if a compiler is defined, compile it also

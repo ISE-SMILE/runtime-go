@@ -27,6 +27,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 )
 
 // ActionProxy is the container of the data specific to a server
@@ -170,6 +171,17 @@ func (ap *ActionProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ap.initHandler(w, r)
 	case "/run":
 		ap.runHandler(w, r)
+	case "/onpause":
+		ap.signalHandler(w, r, syscall.SIGINT)
+	case "/onstart":
+		sendError(w, http.StatusNotImplemented, "not implemented")
+		return
+	case "/onfinish":
+		ap.signalHandler(w, r, syscall.SIGABRT)
+	case "/freshen":
+		ap.signalHandler(w, r, syscall.SIGUSR1)
+	case "/hint":
+		ap.signalHandler(w, r, syscall.SIGUSR2)
 	}
 }
 
@@ -190,9 +202,9 @@ func (ap *ActionProxy) ExtractAndCompileIO(r io.Reader, w io.Writer, main string
 
 	envMap := make(map[string]interface{})
 	if env != "" {
-	    json.Unmarshal([]byte(env), &envMap)
+		json.Unmarshal([]byte(env), &envMap)
 	}
-    ap.SetEnv(envMap)
+	ap.SetEnv(envMap)
 
 	// extract and compile it
 	file, err := ap.ExtractAndCompile(&in, main)
