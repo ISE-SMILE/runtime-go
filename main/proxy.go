@@ -22,7 +22,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/apache/openwhisk-runtime-go/openwhisk"
+	"github.com/ise-smile/runtime-go/openwhisk"
 )
 
 // flag to show version

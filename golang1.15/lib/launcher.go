@@ -22,54 +22,26 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	api "github.com/ise-smile/runtime-go/openwhisk"
 	"io"
 	"log"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 )
 
 // OwExecutionEnv is the execution environment set at compile time
 var OwExecutionEnv = ""
 
-type ackMsg struct {
-	Ok        bool  `json:"ok"`
-	PauseOk   bool `json:"pause,omitempty"`
-	FinishOk  bool `json:"finish,omitempty"`
-	HintOk    bool `json:"hint,omitempty"`
-	FreshenOk bool `json:"freshen,omitempty"`
-}
-
-
-type signals interface {
-	Pause(out *os.File)
-	Stop(out *os.File)
-	Hint(in map[string]string, out *os.File)
-	Freshen(in map[string]string, out *os.File)
-}
-
-type BaseSignals struct {}
-
-func (b BaseSignals) Pause(out *os.File) {}
-
-func (b BaseSignals) Stop(out *os.File) {}
-
-func (b BaseSignals) Hint(in map[string]string, out *os.File) {}
-
-func (b BaseSignals) Freshen(in map[string]string, out *os.File) {}
-
-var Interruppts signals
+var LifeCycleHooks api.LifeCycleHooks
 
 //pause,stop,hint,freshen
-var InterruptSupport ackMsg = ackMsg{
+var SupportedHooks api.LifeCycleHookFlags = api.LifeCycleHookFlags{
 	Ok:        true,
-	PauseOk:   false,
-	FinishOk:  false,
-	HintOk:    false,
-	FreshenOk: false,
+	Pausing:   false,
+	Finishing: false,
+	Hinting:   false,
+	Freshen:   false,
 }
-
 
 func main() {
 	// check if the execution environment is correct
@@ -100,54 +72,9 @@ func main() {
 	defer out.Close()
 	reader := bufio.NewReader(os.Stdin)
 
-	if Interruppts != nil{
-		signals := make([]os.Signal,0)
-		if InterruptSupport.PauseOk {
-			signals = append(signals, syscall.SIGINT)
-		}
+	buf := api.ActivateHooks(SupportedHooks, LifeCycleHooks, reader, out)
+	fmt.Fprintln(out, string(buf))
 
-		if InterruptSupport.FinishOk {
-			signals = append(signals, syscall.SIGABRT)
-		}
-
-		if InterruptSupport.HintOk {
-			signals = append(signals, syscall.SIGUSR1)
-		}
-
-		if InterruptSupport.FreshenOk {
-			signals = append(signals, syscall.SIGUSR2)
-		}
-
-		capture := make(chan os.Signal, 2)
-		signal.Notify(capture, signals...)
-
-
-		go func() {
-			for {
-				sig := <-capture
-				switch sig {
-				case syscall.SIGINT:
-					Interruppts.Pause(out)
-				case syscall.SIGABRT:
-					Interruppts.Stop(out)
-					return
-				case syscall.SIGUSR1:
-					Interruppts.Hint(nil,out)
-				case syscall.SIGUSR2:
-					Interruppts.Freshen(nil,out)
-				}
-			}
-		}()
-	}
-
-	// acknowledgement of started action
-	buf,err := json.Marshal(InterruptSupport)
-	if err != nil{
-		fmt.Fprintf(out, `{ \"ok\": false , }%s`, "\n")
-		return
-	} else {
-		fmt.Fprintln(out,string(buf))
-	}
 	if debug {
 		log.Println("action started")
 	}
