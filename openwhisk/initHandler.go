@@ -62,8 +62,10 @@ func sendOK(executor *Executor, w http.ResponseWriter) {
 	buf, err := json.Marshal(resp)
 	if err != nil {
 		Debug("failed to marshal ack %+v", err)
-		buf = []byte("{\"ok\":true}\n")
+		buf = []byte("{\"ok\":true}")
 	}
+	//ensure newline
+	buf = append(buf, '\n')
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(buf)))
 	w.Write(buf)
 	if f, ok := w.(http.Flusher); ok {
