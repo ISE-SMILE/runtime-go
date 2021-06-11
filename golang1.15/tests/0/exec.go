@@ -14,7 +14,6 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 package main
 
 import (
@@ -22,25 +21,28 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
-	"log"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
+
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 )
 
-func main() {
-	// debugging
-	var debug = os.Getenv("OW_DEBUG") != ""
+type ackMsg struct {
+	Ok        bool `json:"ok"`
+	PauseOk   bool `json:"pause,omitempty"`
+	FinishOk  bool `json:"finish,omitempty"`
+	HintOk    bool `json:"hint,omitempty"`
+	FreshenOk bool `json:"freshen,omitempty"`
+}
 
-	if debug {
-		filename := os.Getenv("OW_DEBUG")
-		f, err := os.OpenFile(filename, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
-		if err == nil {
-			log.SetOutput(f)
-			defer f.Close()
-		}
-		log.Printf("ACTION ENV: %v", os.Environ())
-	}
+func init() {
+	zerolog.TimeFieldFormat = ""
+}
+
+func main() {
 
 	// assign the main function
 	type Action func(event map[string]interface{}) map[string]interface{}
@@ -52,34 +54,53 @@ func main() {
 	defer out.Close()
 	reader := bufio.NewReader(os.Stdin)
 
-	// read-eval-print loop
-	if debug {
-		log.Println("started")
+	capture := make(chan os.Signal, 2)
+	signal.Notify(capture, syscall.SIGINT, syscall.SIGABRT, syscall.SIGUSR1, syscall.SIGUSR2)
+
+	go func() {
+		for {
+			sig := <-capture
+			fmt.Printf("{\"signal\":\"%+v\"}%s", sig, '\n')
+			fmt.Fprintf(out, "{\"signal\":\"%+v\"}\n", sig)
+
+			if sig == syscall.SIGTRAP {
+
+				return
+			}
+		}
+	}()
+
+	msg := ackMsg{
+		Ok:        true,
+		PauseOk:   true,
+		FinishOk:  true,
+		HintOk:    true,
+		FreshenOk: true,
 	}
+	buf, err := json.Marshal(msg)
+	if err != nil {
+		fmt.Fprintf(out, `{ \"ok\": false , }%s`, "\n")
+	} else {
+		fmt.Fprintln(out, string(buf))
+	}
+
 	for {
 		// read one line
 		inbuf, err := reader.ReadBytes('\n')
 		if err != nil {
-			if err != io.EOF {
-				log.Println(err)
-			}
 			break
 		}
-		if debug {
-			log.Printf(">>>'%s'>>>", inbuf)
-		}
+
 		// parse one line
 		var input map[string]interface{}
 		err = json.Unmarshal(inbuf, &input)
 		if err != nil {
-			log.Println(err.Error())
 			fmt.Fprintf(out, "{ error: %q}\n", err.Error())
 			continue
 		}
-		if debug {
-			log.Printf("%v\n", input)
-		}
+
 		// set environment variables
+		err = json.Unmarshal(inbuf, &input)
 		for k, v := range input {
 			if k == "value" {
 				continue
@@ -98,14 +119,21 @@ func main() {
 		// encode the answer
 		output, err := json.Marshal(&result)
 		if err != nil {
-			log.Println(err.Error())
 			fmt.Fprintf(out, "{ error: %q}\n", err.Error())
 			continue
 		}
 		output = bytes.Replace(output, []byte("\n"), []byte(""), -1)
-		if debug {
-			log.Printf("'<<<%s'<<<", output)
-		}
 		fmt.Fprintf(out, "%s\n", output)
 	}
+}
+
+func Main(obj map[string]interface{}) map[string]interface{} {
+	name, ok := obj["name"].(string)
+	if !ok {
+		name = "world"
+	}
+	log.Debug().Str("name", name).Msg("Hello")
+	msg := make(map[string]interface{})
+	msg["module-main"] = "Hello, " + name + "!"
+	return msg
 }

@@ -22,23 +22,35 @@ build:
 localbuild:
 	GOOS=linux GOARCH=amd64 go build -o proxy -a  -ldflags '-extldflags "-static"' ../main/proxy.go
 	docker build -t $(IMG) .
-	docker tag $(IMG) whisk/$(IMG)
+	docker tag $(IMG) $(IMG)
 
 push: build
 	docker tag $(IMG) actionloop/$(IMG)
 	docker push actionloop/$(IMG):nightly
 
 clean:
-	docker rmi -f whisk/$(IMG) actionloop/$(IMG)
+	docker rmi -f $(IMG) actionloop/$(IMG)
 
 debug: build
 	docker run -p 8080:8080 \
 	--name go-action --rm -ti --entrypoint=/bin/bash \
 	-e OW_COMPILER=/mnt/bin/compile \
-	-v $(PWD):/mnt whisk/$(IMG)
+	-v $(PWD):/mnt $(IMG)
 
 enter:
 	docker exec -ti go-action bash
 
+run: build
+	docker run -d -p 8080:8080 \
+	--name go-action --rm \
+	-e OW_COMPILER=/mnt/bin/compile \
+	-v $(PWD):/mnt $(IMG)
+
+test: run
+	$(shell ./test.sh 0 1)
+	$(shell ./test.sh 1)
+
+stop:
+	docker stop go-action
 
 .PHONY: build push clean debug enter

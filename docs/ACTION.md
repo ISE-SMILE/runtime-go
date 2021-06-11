@@ -73,14 +73,14 @@ type HookHandler struct {
 
 func (h HookHandler)  Pause(out *os.File) {
 	//FLush open connections, close database connections...
-	fmt.FPrintln(out,"captured pause event")
+	fmt.Fprintln(out,"captured pause event")
 }
 
-func func init() {
+func init() {
 	//registers that we want to handle pause hooks
 	SupportedHooks.Pausing = true;
     //registers the custom handler
-	LifeCycleHooks = &HookHandler{}
+	RuntimeHooks = &HookHandler{}
 }
 
 

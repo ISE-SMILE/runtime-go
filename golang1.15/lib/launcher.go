@@ -32,7 +32,7 @@ import (
 // OwExecutionEnv is the execution environment set at compile time
 var OwExecutionEnv = ""
 
-var LifeCycleHooks api.LifeCycleHooks
+var RuntimeHooks api.LifeCycleHooks
 
 //pause,stop,hint,freshen
 var SupportedHooks api.LifeCycleHookFlags = api.LifeCycleHookFlags{
@@ -72,7 +72,7 @@ func main() {
 	defer out.Close()
 	reader := bufio.NewReader(os.Stdin)
 
-	buf := api.ActivateHooks(SupportedHooks, LifeCycleHooks, reader, out)
+	buf := api.ActivateHooks(SupportedHooks, RuntimeHooks, reader, out)
 	fmt.Fprintln(out, string(buf))
 
 	if debug {
