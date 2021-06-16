@@ -56,7 +56,6 @@ func sendOK(executor *Executor, w http.ResponseWriter) {
 		resp.HintOk = executor.supportsHint
 		resp.FreshenOk = executor.supportsFreshen
 	}
-
 	// answer OK
 	w.Header().Set("Content-Type", "application/json")
 	buf, err := json.Marshal(resp)
@@ -66,6 +65,7 @@ func sendOK(executor *Executor, w http.ResponseWriter) {
 	}
 	//ensure newline
 	buf = append(buf, '\n')
+	Debug("initialized %+v", buf)
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", len(buf)))
 	w.Write(buf)
 	if f, ok := w.(http.Flusher); ok {
@@ -148,6 +148,7 @@ func (ap *ActionProxy) initHandler(w http.ResponseWriter, r *http.Request) {
 			ap.errFile.Write([]byte(OutputGuard))
 			sendError(w, http.StatusBadGateway, "The action failed to generate or locate a binary. See logs for details.")
 		}
+		Debug("extract and compile error: %+v", err)
 		return
 	}
 
@@ -162,6 +163,7 @@ func (ap *ActionProxy) initHandler(w http.ResponseWriter, r *http.Request) {
 			ap.errFile.Write([]byte(OutputGuard))
 			sendError(w, http.StatusBadGateway, "Cannot start action. Check logs for details.")
 		}
+		Debug("start action error: %+v", err)
 		return
 	}
 	ap.initialized = true

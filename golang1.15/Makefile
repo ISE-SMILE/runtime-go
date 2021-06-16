@@ -46,6 +46,9 @@ run: build
 	-e OW_COMPILER=/mnt/bin/compile \
 	-v $(PWD):/mnt $(IMG)
 
+watch:
+	docker logs -f go-action
+
 test: run
 	$(shell ./test.sh 0 1)
 	$(shell ./test.sh 1)

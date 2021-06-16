@@ -26,7 +26,7 @@ from time import sleep
 def write_file(file, body, executable=False):
     try: os.makedirs(dirname(file), mode=0o755)
     except: pass
-    with open(file, mode="wb") as f:
+    with open(file, mode="w") as f:
         f.write(body)
     if executable:
         os.chmod(file, 0o755)
@@ -87,12 +87,12 @@ def build(source_dir, target_dir):
         if exists(gomod):
             ret = subprocess.call(["go", "mod", "download"], cwd=source_dir, env=env, stderr=dn, stdout=dn)
             if ret != 0:
-                print("cannot download modules")
+                print("failed: cannot download modules")
                 return
         else:
             ret = subprocess.call(["go", "mod", "init", "exec"], cwd=source_dir, env=env, stdout=dn, stderr=dn)
             if ret != 0:
-                print("cannot init modules")
+                print("failed: cannot init modules", ret)
                 return
 
     ldflags = "-s -w"
@@ -101,7 +101,7 @@ def build(source_dir, target_dir):
         ldflags += " -X main.OwExecutionEnv=%s" % os.environ["__OW_EXECUTION_ENV"]
     ret = subprocess.call(gobuild, cwd=source_dir, env=env)
     if ret != 0:
-        print("failed", " ".join(gobuild), "\nin", source_dir, "\nenv", env)
+        print("failed:", " ".join(gobuild), "\nin", source_dir, "\nenv", env)
 
 def debug(source_dir, target_dir, port):
     source_dir = os.path.abspath(source_dir)

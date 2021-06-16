@@ -104,7 +104,9 @@ func Example_compileError() {
 	sys(PREP, "error.src", N)
 	ap := NewActionProxy(TMP, COMP, os.Stdout, os.Stderr)
 	err := ap.CompileAction("main", TMP+N+"/src", TMP+N+"/bin")
-	fmt.Printf("%v", removeLineNr(err.Error()))
+	if err != nil {
+		fmt.Printf("%v", removeLineNr(err.Error()))
+	}
 	// Unordered output:
 	// ./exec__.go::: syntax error: unexpected error at end of statement
 }

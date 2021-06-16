@@ -85,6 +85,8 @@ func (ap *ActionProxy) runHandler(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(response, &objmap)
 	if err != nil {
 		sendError(w, http.StatusBadGateway, "The action did not return a dictionary.")
+		//XXX: this is expensive!
+		//Debug("The action did not return a dictionary. got:%+v err: %+v",string(response),err)
 		return
 	}
 

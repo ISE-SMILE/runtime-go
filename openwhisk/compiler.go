@@ -18,6 +18,7 @@
 package openwhisk
 
 import (
+	"bytes"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -60,9 +61,14 @@ func (ap *ActionProxy) CompileAction(main string, srcDir string, binDir string) 
 
 	// gather stdout and stderr
 	out, err := cmd.CombinedOutput()
-	Debug("compiler out: %s, %v", out, err)
+	//not all output might be bad!
 	if len(out) > 0 {
-		return fmt.Errorf("%s", out)
+		Debug("compiler out: %s, %v", out, err)
+		if bytes.HasPrefix(out, []byte("failed")) {
+			return fmt.Errorf("%s", out)
+		} else if bytes.Contains(out, []byte("error")) {
+			return fmt.Errorf("%s", out)
+		}
 	}
 	if err != nil {
 		return err
