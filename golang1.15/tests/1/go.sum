@@ -3,6 +3,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/ise-smile/runtime-go v0.0.1 h1:TAYDYLtQYEkRxdzBaIxQPjGf4E8OskwlAkCPiDwqNbg=
 github.com/ise-smile/runtime-go v0.0.1/go.mod h1:8LfvFg9rHGT6+4E++wTM5+o4K36fXqzzyK6p0ovMJF0=
+github.com/ise-smile/runtime-go v0.1.0 h1:7TbbYs/trhpdqS+69zO+mfYZ57Cfh7E9HxdKZ6J5FUo=
+github.com/ise-smile/runtime-go v0.1.0/go.mod h1:8LfvFg9rHGT6+4E++wTM5+o4K36fXqzzyK6p0ovMJF0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=

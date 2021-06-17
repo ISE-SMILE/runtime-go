@@ -52,6 +52,7 @@ watch:
 test: run
 	$(shell ./test.sh 0 1)
 	$(shell ./test.sh 1)
+	$(shell ./test.sh 2)
 
 stop:
 	docker stop go-action
