@@ -26,9 +26,12 @@ type HookHandler struct {
 	api.BaseSignals
 }
 
+var pauses = 0;
+
 func (h HookHandler) Pause(out *os.File) {
 	//FLush open connections, close database connections...
 	fmt.Fprintln(out, "captured pause event")
+	pauses++;
 }
 
 func init() {
@@ -48,7 +51,7 @@ func Main(obj map[string]interface{}) map[string]interface{} {
 	msg := make(map[string]interface{})
 	msg["message"] = "Hello, " + name + "!"
 	// log in stdout or in stderr
-	fmt.Printf("name=%s\n", name)
+	fmt.Printf("name=%s pauses=%d\n", name,pauses)
 	// encode the result back in json
 	return msg
 }
